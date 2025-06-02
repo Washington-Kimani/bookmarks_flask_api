@@ -99,3 +99,35 @@ def get_bookmark(id):
         "created_at": bookmark.created_at,
         "updated_at": bookmark.updated_at
     }), HTTP_200_OK
+
+
+# route to edit bookmark
+@bookmarks.put("/<int:id>")
+@bookmarks.patch("/<int:id>")
+@jwt_required()
+def edit_bookmark(id):
+    current_user = get_jwt_identity()
+    bookmark = Bookmark.query.filter_by(id=id, user_id=current_user)
+
+    # check if exists
+    if not bookmark:
+        return jsonify({
+            "error": "Bookmark not found"
+        }), HTTP_404_NOT_FOUND
+    
+    body = request.json.get('body', '')
+    url = request.json.get('url', '')
+
+    # set the new bookmark values
+    bookmark.body = body
+    bookmark.url = url
+
+    db.session.commit()
+
+    # return editted bookmark
+    return jsonify({
+        "bookmark": bookmark
+    }), HTTP_200_OK
+
+
+# delete bookmark route
