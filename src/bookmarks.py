@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import validators
-from src.constants.http_status_codes import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
+from src.constants.http_status_codes import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_206_PARTIAL_CONTENT, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
 from src.database import Bookmark, db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -78,7 +78,7 @@ def handle_bookmarks():
             "meta": meta
         }), HTTP_200_OK
 
-# get on bookmark by id
+# get one bookmark by id
 @bookmarks.get("/<int:id>")
 @jwt_required()
 def get_bookmark(id):
@@ -107,7 +107,7 @@ def get_bookmark(id):
 @jwt_required()
 def edit_bookmark(id):
     current_user = get_jwt_identity()
-    bookmark = Bookmark.query.filter_by(id=id, user_id=current_user)
+    bookmark = Bookmark.query.filter_by(id=id, user_id=current_user).first()
 
     # check if exists
     if not bookmark:
@@ -118,15 +118,24 @@ def edit_bookmark(id):
     body = request.json.get('body', '')
     url = request.json.get('url', '')
 
-    # set the new bookmark values
-    bookmark.body = body
+    if not validators.url(url):
+        return jsonify({
+            'error': 'Enter a valid url'
+        }), HTTP_400_BAD_REQUEST
+
     bookmark.url = url
+    bookmark.body = body
 
     db.session.commit()
 
-    # return editted bookmark
     return jsonify({
-        "bookmark": bookmark
+        'id': bookmark.id,
+        'url': bookmark.url,
+        'short_url': bookmark.short_url,
+        'visit': bookmark.visits,
+        'body': bookmark.body,
+        'created_at': bookmark.created_at,
+        'updated_at': bookmark.updated_at,
     }), HTTP_200_OK
 
 
@@ -134,8 +143,13 @@ def edit_bookmark(id):
 @bookmarks.delete("/<int:id>")
 @jwt_required()
 def delete_bookmark(id):
+    if not id:
+        return ({
+            "message": "Bookmark ID is reuired for this operation"
+        }), HTTP_206_PARTIAL_CONTENT
+    # get uer id
     current_user = get_jwt_identity()
-
+    # get the bookmark
     bookmark = Bookmark.query.filter_by(id=id, user_id=current_user).first()
 
     if not bookmark:
@@ -146,6 +160,28 @@ def delete_bookmark(id):
     db.session.delete(bookmark)
     db.session.commit()
 
-    return jsonify({
-        "message": "The bookmsrk has been deleted successfully"
-    }), HTTP_200_OK
+    return jsonify({}), HTTP_204_NO_CONTENT
+
+
+# get link visits stats
+@bookmarks.get('/stats')
+@jwt_required()
+def get_stats():
+    current_user = get_jwt_identity()
+
+    data = []
+
+    # get all links
+    links = Bookmark.query.filter_by(user_id=current_user).all()
+
+    for link in links:
+        new_link  = {
+            'id': link.id,
+            'visits': link.visits,
+            'url': link.url,
+            'short_url': link.short_url
+        }
+
+        data.append(new_link)
+
+    return jsonify({"data":data}), HTTP_200_OK
