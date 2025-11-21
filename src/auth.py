@@ -72,12 +72,13 @@ def login():
 
         if is_pass_correct:
             refresh = create_refresh_token(identity=str(user.id))
-            access = create_access_token(identity=str(user.id))
+            access_token = create_access_token(identity=str(user.id))
 
             return jsonify({
-                "user": {
-                    "refresh_token": refresh,
-                    "access": access,
+                "refresh_token": refresh,
+                "access_token": access_token,
+                "user" : {
+                    "id": user.id,
                     "username": user.username,
                     "email": user.email
                 }
@@ -115,6 +116,6 @@ def refresh_token():
     access = create_access_token(identity=identity)
 
     return jsonify({
-        "message": "token refreshed sucessfully",
+        "message": "token refreshed successfully",
         "access": access
     }), HTTP_200_OK

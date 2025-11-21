@@ -1,12 +1,21 @@
-from flask import Flask, redirect
+from flask import Flask, redirect, request
+from flask_cors import CORS
 import os
 from src.auth import auth
 from src.bookmarks import bookmarks
+from src.users import users
 from src.database import db, Bookmark
 from flask_jwt_extended import JWTManager
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
+    CORS(app, resources={r"/api/v1/*": {"origins": "http://localhost:3000"}})
+
+    @app.before_request
+    def check_for_options():
+        if request.method == "OPTIONS":
+            return "", 200
+        return None
 
     if test_config is None:
         db_uri = os.getenv("SQLALCHEMY_DB_URI")
@@ -28,6 +37,7 @@ def create_app(test_config=None):
 
     app.register_blueprint(auth)
     app.register_blueprint(bookmarks)
+    app.register_blueprint(users)
 
     # handle short url redirect
     @app.get('/<short_url>')
