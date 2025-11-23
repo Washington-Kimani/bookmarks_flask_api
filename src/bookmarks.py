@@ -4,6 +4,8 @@ from src.constants.http_status_codes import HTTP_200_OK, HTTP_201_CREATED, HTTP_
 from src.database import Bookmark, db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from src.utils.get_favicon import fetch_favicon
+
 bookmarks = Blueprint("bookmarks", __name__, url_prefix="/api/v1/bookmarks")
 
 # routes
@@ -18,6 +20,9 @@ def handle_bookmarks():
     if request.method == 'POST':
         body = request.json.get('body', '')
         url = request.json.get('url', '')
+        description = request.json.get('description', '')
+
+        icon_url = fetch_favicon(url)
 
         if not validators.url(url):
             return jsonify({
@@ -29,7 +34,7 @@ def handle_bookmarks():
                 "error": "The URL already exists in your bookmarks"
             }), HTTP_409_CONFLICT
         
-        bookmark = Bookmark(body=body, url=url, user_id=current_user)
+        bookmark = Bookmark(body=body, url=url, description=description, icon_url=icon_url, user_id=current_user)
         db.session.add(bookmark)
         db.session.commit()
 
@@ -46,7 +51,7 @@ def handle_bookmarks():
     else:
         # pagination parameters
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 5, type=int)
+        per_page = request.args.get('per_page', 6, type=int)
 
         bookmarks = Bookmark.query.filter_by(user_id=current_user).paginate(page=page, per_page=per_page)
 
@@ -54,13 +59,16 @@ def handle_bookmarks():
 
         for bookmark in bookmarks:
             data.append({
-                "id": bookmark.id,
-                "body": bookmark.body,
-                "url": bookmark.url,
-                "short_url": bookmark.short_url,
-                "visits": bookmark.visits,
-                "created_at": bookmark.created_at,
-                "updated_at": bookmark.updated_at
+                'id': bookmark.id,
+                'url': bookmark.url,
+                'short_url': bookmark.short_url,
+                'visit': bookmark.visits,
+                'body': bookmark.body,
+                'icon_url': bookmark.icon_url,
+                'description': bookmark.description,
+                'archived': bookmark.archived,
+                'created_at': bookmark.created_at,
+                'updated_at': bookmark.updated_at,
             })
 
         meta = {
@@ -91,13 +99,16 @@ def get_bookmark(id):
         }), HTTP_404_NOT_FOUND
 
     return jsonify({
-        "id": bookmark.id,
-        "body": bookmark.body,
-        "url": bookmark.url,
-        "short_url": bookmark.short_url,
-        "visits": bookmark.visits,
-        "created_at": bookmark.created_at,
-        "updated_at": bookmark.updated_at
+        'id': bookmark.id,
+        'url': bookmark.url,
+        'short_url': bookmark.short_url,
+        'visit': bookmark.visits,
+        'body': bookmark.body,
+        'icon_url': bookmark.icon_url,
+        'description': bookmark.description,
+        'archived': bookmark.archived,
+        'created_at': bookmark.created_at,
+        'updated_at': bookmark.updated_at,
     }), HTTP_200_OK
 
 
@@ -117,6 +128,7 @@ def edit_bookmark(id):
     
     body = request.json.get('body', '')
     url = request.json.get('url', '')
+    description = request.json.get('description', '')
 
     if not validators.url(url):
         return jsonify({
@@ -134,6 +146,9 @@ def edit_bookmark(id):
         'short_url': bookmark.short_url,
         'visit': bookmark.visits,
         'body': bookmark.body,
+        'icon_url': bookmark.icon_url,
+        'description': bookmark.description,
+        'archived': bookmark.archived,
         'created_at': bookmark.created_at,
         'updated_at': bookmark.updated_at,
     }), HTTP_200_OK
