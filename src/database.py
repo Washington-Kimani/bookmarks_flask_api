@@ -20,9 +20,12 @@ class User(db.Model):
 class Bookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text, nullable=True)
+    description = db.Column(db.Text, nullable=False)
     url = db.Column(db.Text, nullable=False)
+    icon_url = db.Column(db.Text, nullable=True)
     short_url = db.Column(db.String(3), nullable=True)
     visits = db.Column(db.Integer, default=0)
+    archived = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
