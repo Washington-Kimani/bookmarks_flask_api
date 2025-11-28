@@ -1,3 +1,4 @@
+from flasgger import swag_from
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from src.constants.http_status_codes import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, HTTP_401_UNAUTHORIZED
@@ -13,6 +14,7 @@ auth = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
 # routes
 # registration route
 @auth.post("/register")
+@swag_from('./docs/register.yaml')
 def register():
     username = request.json.get("username", '')
     email = request.json.get("email", '')

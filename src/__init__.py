@@ -6,6 +6,8 @@ from src.bookmarks import bookmarks
 from src.users import users
 from src.database import db, Bookmark
 from flask_jwt_extended import JWTManager
+from flasgger import Swagger, swag_from
+from src.config.swagger import swagger_config, template
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -21,7 +23,7 @@ def create_app(test_config=None):
         db_uri = os.getenv("SQLALCHEMY_DB_URI")
         if not db_uri:
             raise RuntimeError("SQLALCHEMY_DB_URI environment variable is not set")
-        
+
         app.config.from_mapping(
             SECRET_KEY=os.getenv('SECRET_KEY'),
             SQLALCHEMY_DATABASE_URI=db_uri,
@@ -34,13 +36,15 @@ def create_app(test_config=None):
     db.init_app(app)
 
     JWTManager(app)
-
     app.register_blueprint(auth)
     app.register_blueprint(bookmarks)
     app.register_blueprint(users)
 
+    Swagger(app, template=template)
+
     # handle short url redirect
     @app.get('/<short_url>')
+    @swag_from('./docs/short_url.yaml')
     def redirect_to_url(short_url):
         bookmark = Bookmark.query.filter_by(short_url=short_url).first_or_404()
 
