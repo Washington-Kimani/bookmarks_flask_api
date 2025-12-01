@@ -92,7 +92,7 @@ def login():
 
 
 
-@auth.get("/profile")
+@auth.post("/profile")
 @jwt_required()
 def profile():
     user_id = get_jwt_identity()

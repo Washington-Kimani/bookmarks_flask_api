@@ -38,14 +38,41 @@ def handle_bookmarks():
         db.session.add(bookmark)
         db.session.commit()
 
+        # pagination options
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 6, type=int)
+
+        bookmarks = Bookmark.query.filter_by(user_id=current_user).paginate(page=page, per_page=per_page)
+
+        data = []
+
+        for bookmark in bookmarks:
+            data.append({
+                'id': bookmark.id,
+                'url': bookmark.url,
+                'short_url': bookmark.short_url,
+                'visit': bookmark.visits,
+                'body': bookmark.body,
+                'icon_url': bookmark.icon_url,
+                'description': bookmark.description,
+                'archived': bookmark.archived,
+                'created_at': bookmark.created_at,
+                'updated_at': bookmark.updated_at,
+            })
+
+        meta = {
+            "page": bookmarks.page,
+            "pages": bookmarks.pages,
+            "total_count": bookmarks.total,
+            "next_page": bookmarks.next_num,
+            "prev_page": bookmarks.prev_num,
+            "has_next": bookmarks.has_next,
+            "has_prev": bookmarks.has_prev
+        }
+
         return jsonify({
-            "id": bookmark.id,
-            "body": bookmark.body,
-            "url": bookmark.url,
-            "short_url": bookmark.short_url,
-            "visits": bookmark.visits,
-            "created_at": bookmark.created_at,
-            "updated_at": bookmark.updated_at
+            "data": data,
+            "meta": meta
         }), HTTP_201_CREATED
     
     else:
@@ -160,7 +187,7 @@ def edit_bookmark(id):
 def delete_bookmark(id):
     if not id:
         return ({
-            "message": "Bookmark ID is reuired for this operation"
+            "message": "Bookmark ID is required for this operation"
         }), HTTP_206_PARTIAL_CONTENT
     # get uer id
     current_user = get_jwt_identity()
