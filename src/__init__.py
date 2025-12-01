@@ -11,7 +11,7 @@ from src.config.swagger import swagger_config, template
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
-    CORS(app, resources={r"/api/v1/*": {"origins": ["http://localhost:3000", "http://localhost:3001", "https://bookmark-manager-nb1g.onrender.com"]}})
+    CORS(app, resources={r"/api/v1/*": {"origins": ["http://localhost:3000", "http://localhost:3001", "https://bookmark-manager-codes.vercel.app"]}})
 
     @app.before_request
     def check_for_options():
