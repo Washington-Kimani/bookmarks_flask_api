@@ -110,8 +110,8 @@ def profile():
 
 
 # refresh token route
-@auth.get("/token")
-@jwt_required(refresh=True)
+@auth.post("/token")
+@jwt_required()
 def refresh_token():
     identity = get_jwt_identity()
 
