@@ -9,109 +9,112 @@ from src.utils.get_favicon import fetch_favicon
 bookmarks = Blueprint("bookmarks", __name__, url_prefix="/api/v1/bookmarks")
 
 # routes
-# bookmarks route
-@bookmarks.route("/", methods=['GET', 'POST'])
+# bookmarks get route
+@bookmarks.get("/")
 @jwt_required()
 def handle_bookmarks():
     # get current user from token
     current_user = get_jwt_identity()
-    
-    # save the bookmark if method is post
-    if request.method == 'POST':
-        body = request.json.get('body', '')
-        url = request.json.get('url', '')
-        description = request.json.get('description', '')
 
-        icon_url = fetch_favicon(url)
+    # pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 6, type=int)
 
-        if not validators.url(url):
-            return jsonify({
-                "error": "URL in entered is not valid"
-            }), HTTP_400_BAD_REQUEST
-        
-        if Bookmark.query.filter_by(url=url).first():
-            return jsonify({
-                "error": "The URL already exists in your bookmarks"
-            }), HTTP_409_CONFLICT
-        
-        bookmark = Bookmark(body=body, url=url, description=description, icon_url=icon_url, user_id=current_user)
-        db.session.add(bookmark)
-        db.session.commit()
+    bookmarks = Bookmark.query.filter_by(user_id=current_user,archived=False).paginate(page=page, per_page=per_page)
 
-        # pagination options
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 6, type=int)
+    data = []
 
-        bookmarks = Bookmark.query.filter_by(user_id=current_user).paginate(page=page, per_page=per_page)
+    for bookmark in bookmarks:
+        data.append({
+            'id': bookmark.id,
+            'url': bookmark.url,
+            'short_url': bookmark.short_url,
+            'visit': bookmark.visits,
+            'body': bookmark.body,
+            'icon_url': bookmark.icon_url,
+            'description': bookmark.description,
+            'archived': bookmark.archived,
+            'created_at': bookmark.created_at,
+            'updated_at': bookmark.updated_at,
+        })
 
-        data = []
+    meta = {
+        "page": bookmarks.page,
+        "pages": bookmarks.pages,
+        "total_count": bookmarks.total,
+        "next_page": bookmarks.next_num,
+        "prev_page": bookmarks.prev_num,
+        "has_next": bookmarks.has_next,
+        "has_prev": bookmarks.has_prev
+    }
 
-        for bookmark in bookmarks:
-            data.append({
-                'id': bookmark.id,
-                'url': bookmark.url,
-                'short_url': bookmark.short_url,
-                'visit': bookmark.visits,
-                'body': bookmark.body,
-                'icon_url': bookmark.icon_url,
-                'description': bookmark.description,
-                'archived': bookmark.archived,
-                'created_at': bookmark.created_at,
-                'updated_at': bookmark.updated_at,
-            })
+    return jsonify({
+        "data": data,
+        "meta": meta
+    }), HTTP_200_OK
 
-        meta = {
-            "page": bookmarks.page,
-            "pages": bookmarks.pages,
-            "total_count": bookmarks.total,
-            "next_page": bookmarks.next_num,
-            "prev_page": bookmarks.prev_num,
-            "has_next": bookmarks.has_next,
-            "has_prev": bookmarks.has_prev
-        }
+# create a new bookmark
+@bookmarks.post("/")
+@jwt_required()
+def handle_create_bookmark():
+    current_user = get_jwt_identity()
+    # save the bookmark
+    body = request.json.get('body', '')
+    url = request.json.get('url', '')
+    description = request.json.get('description', '')
 
+    icon_url = fetch_favicon(url)
+
+    if not validators.url(url):
         return jsonify({
-            "data": data,
-            "meta": meta
-        }), HTTP_201_CREATED
-    
-    else:
-        # pagination parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 6, type=int)
+            "error": "URL in entered is not valid"
+        }), HTTP_400_BAD_REQUEST
 
-        bookmarks = Bookmark.query.filter_by(user_id=current_user).paginate(page=page, per_page=per_page)
-
-        data = []
-
-        for bookmark in bookmarks:
-            data.append({
-                'id': bookmark.id,
-                'url': bookmark.url,
-                'short_url': bookmark.short_url,
-                'visit': bookmark.visits,
-                'body': bookmark.body,
-                'icon_url': bookmark.icon_url,
-                'description': bookmark.description,
-                'archived': bookmark.archived,
-                'created_at': bookmark.created_at,
-                'updated_at': bookmark.updated_at,
-            })
-
-        meta = {
-            "page": bookmarks.page,
-            "pages": bookmarks.pages,
-            "total_count": bookmarks.total,
-            "next_page": bookmarks.next_num,
-            "prev_page": bookmarks.prev_num,
-            "has_next": bookmarks.has_next,
-            "has_prev": bookmarks.has_prev
-        }
-
+    if Bookmark.query.filter_by(url=url).first():
         return jsonify({
-            "data": data,
-            "meta": meta
-        }), HTTP_200_OK
+            "error": "The URL already exists in your bookmarks"
+        }), HTTP_409_CONFLICT
+
+    bookmark = Bookmark(body=body, url=url, description=description, icon_url=icon_url, user_id=current_user)
+    db.session.add(bookmark)
+    db.session.commit()
+
+    # pagination options
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 6, type=int)
+
+    bookmarks = Bookmark.query.filter_by(user_id=current_user).paginate(page=page, per_page=per_page)
+
+    data = []
+
+    for bookmark in bookmarks:
+        data.append({
+            'id': bookmark.id,
+            'url': bookmark.url,
+            'short_url': bookmark.short_url,
+            'visit': bookmark.visits,
+            'body': bookmark.body,
+            'icon_url': bookmark.icon_url,
+            'description': bookmark.description,
+            'archived': bookmark.archived,
+            'created_at': bookmark.created_at,
+            'updated_at': bookmark.updated_at,
+        })
+
+    meta = {
+        "page": bookmarks.page,
+        "pages": bookmarks.pages,
+        "total_count": bookmarks.total,
+        "next_page": bookmarks.next_num,
+        "prev_page": bookmarks.prev_num,
+        "has_next": bookmarks.has_next,
+        "has_prev": bookmarks.has_prev
+    }
+
+    return jsonify({
+        "data": data,
+        "meta": meta
+    }), HTTP_201_CREATED
 
 # get one bookmark by id
 @bookmarks.get("/<int:id>")
@@ -164,6 +167,7 @@ def edit_bookmark(id):
 
     bookmark.url = url
     bookmark.body = body
+    bookmark.description = description
 
     db.session.commit()
 
@@ -179,6 +183,63 @@ def edit_bookmark(id):
         'created_at': bookmark.created_at,
         'updated_at': bookmark.updated_at,
     }), HTTP_200_OK
+
+# archive a bookmark
+@bookmarks.put("/<int:id>/archive")
+@jwt_required()
+def archive_bookmark(id):
+    if not id:
+        return jsonify({
+            "message": "Bookmark ID is required to archive a bookmark."
+        }), HTTP_206_PARTIAL_CONTENT
+    # get user ID
+    current_user = get_jwt_identity()
+    # get the bookmark
+    bookmark = Bookmark.query.filter_by(id=id, user_id=current_user).first()
+
+    if not bookmark:
+        return jsonify({
+            "message": "Bookmark not found"
+        }), HTTP_404_NOT_FOUND
+
+    # archive or unarchive the bookmark
+    if not bookmark.archived:
+        bookmark.archived = True
+        db.session.commit()
+    else:
+        bookmark.archived = True
+
+    return jsonify({}), HTTP_200_OK
+
+
+# get archived bookmarks
+@bookmarks.get("/archived")
+@jwt_required()
+def get_archived_bookmarks():
+    current_user = get_jwt_identity()
+    # get the bookmarks
+    bookmarks = Bookmark.query.filter_by(archived=True, user_id=current_user).all()
+    print(bookmarks)
+
+    data = []
+
+    for bookmark in bookmarks:
+        data.append({
+            'id': bookmark.id,
+            'url': bookmark.url,
+            'short_url': bookmark.short_url,
+            'visit': bookmark.visits,
+            'body': bookmark.body,
+            'icon_url': bookmark.icon_url,
+            'description': bookmark.description,
+            'archived': bookmark.archived,
+            'created_at': bookmark.created_at,
+            'updated_at': bookmark.updated_at,
+        })
+
+    return jsonify({
+        'data': data,
+    })
 
 
 # delete bookmark route
