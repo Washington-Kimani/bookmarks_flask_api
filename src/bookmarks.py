@@ -79,41 +79,19 @@ def handle_create_bookmark():
     db.session.add(bookmark)
     db.session.commit()
 
-    # pagination options
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 6, type=int)
-
-    bookmarks = Bookmark.query.filter_by(user_id=current_user).paginate(page=page, per_page=per_page)
-
-    data = []
-
-    for bookmark in bookmarks:
-        data.append({
+    return jsonify({
+        "data": {
             'id': bookmark.id,
-            'url': bookmark.url,
-            'short_url': bookmark.short_url,
-            'visit': bookmark.visits,
             'body': bookmark.body,
-            'icon_url': bookmark.icon_url,
             'description': bookmark.description,
+            'url': bookmark.url,
+            'icon_url': bookmark.icon_url,
+            'short_url': bookmark.short_url,
+            'visits': bookmark.visits,
             'archived': bookmark.archived,
             'created_at': bookmark.created_at,
-            'updated_at': bookmark.updated_at,
-        })
-
-    meta = {
-        "page": bookmarks.page,
-        "pages": bookmarks.pages,
-        "total_count": bookmarks.total,
-        "next_page": bookmarks.next_num,
-        "prev_page": bookmarks.prev_num,
-        "has_next": bookmarks.has_next,
-        "has_prev": bookmarks.has_prev
-    }
-
-    return jsonify({
-        "data": data,
-        "meta": meta
+            'updated_at': bookmark.updated_at
+        }
     }), HTTP_201_CREATED
 
 # get one bookmark by id
@@ -202,15 +180,28 @@ def archive_bookmark(id):
             "message": "Bookmark not found"
         }), HTTP_404_NOT_FOUND
 
-    # archive or unarchive the bookmark
-    if not bookmark.archived:
-        bookmark.archived = True
-        db.session.commit()
-    else:
-        bookmark.archived = True
+    archived = request.json.get('archived')
 
-    return jsonify({}), HTTP_200_OK
+    if archived is None:
+       return jsonify({
+           "error": "`archived` boolean is required.",
+       }), HTTP_400_BAD_REQUEST
 
+    bookmark.archived = bool(archived)
+    db.session.commit()
+
+    return jsonify({
+        'id': bookmark.id,
+        'url': bookmark.url,
+        'short_url': bookmark.short_url,
+        'visit': bookmark.visits,
+        'body': bookmark.body,
+        'icon_url': bookmark.icon_url,
+        'description': bookmark.description,
+        'archived': bookmark.archived,
+        'created_at': bookmark.created_at,
+        'updated_at': bookmark.updated_at,
+    }), HTTP_200_OK
 
 # get archived bookmarks
 @bookmarks.get("/archived")
