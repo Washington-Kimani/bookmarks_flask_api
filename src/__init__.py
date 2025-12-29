@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request
+from flask import Flask, redirect, request, jsonify
 from flask_cors import CORS
 import os
 from src.auth import auth
@@ -42,6 +42,14 @@ def create_app(test_config=None):
 
     Swagger(app, template=template)
 
+    # home route
+    @app.route('/')
+    def home_route():
+        return jsonify({
+            "name": "Bookmark Manager API",
+            "version": "1.0",
+            "description": "Bookmark Manager API",
+        })
     # handle short url redirect
     @app.get('/<short_url>')
     @swag_from('./docs/short_url.yaml')
