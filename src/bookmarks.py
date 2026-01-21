@@ -18,7 +18,7 @@ def handle_bookmarks():
 
     # pagination parameters
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 6, type=int)
+    per_page = request.args.get('per_page', 9, type=int)
 
     bookmarks = Bookmark.query.filter_by(user_id=current_user,archived=False).paginate(page=page, per_page=per_page)
 
